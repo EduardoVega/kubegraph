@@ -81,7 +81,7 @@ func GetInitialObject(client *client.Client, graph *Graph, kind, name string) er
 
 	case "ingress":
 		ingressBuilder := NewIngressBuilder(client)
-		ingresses, err := ingressBuilder.GetIngress(name)
+		ingresses, err := ingressBuilder.GetIngressBackends(name)
 		if err != nil {
 			return err
 		}
@@ -109,7 +109,7 @@ func GetRelatedObjects(client *client.Client, graph *Graph, kind string) error {
 		graph.Services = services
 
 		ingressBuilder := NewIngressBuilder(client)
-		ingresses, err := ingressBuilder.GetIngresses(graph.Services, metav1.ListOptions{})
+		ingresses, err := ingressBuilder.GetAllIngressBackends(graph.Services, metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
@@ -126,7 +126,7 @@ func GetRelatedObjects(client *client.Client, graph *Graph, kind string) error {
 		graph.Pods = pods
 
 		ingressBuilder := NewIngressBuilder(client)
-		ingresses, err := ingressBuilder.GetIngresses(graph.Services, metav1.ListOptions{})
+		ingresses, err := ingressBuilder.GetAllIngressBackends(graph.Services, metav1.ListOptions{})
 		if err != nil {
 			return err
 		}

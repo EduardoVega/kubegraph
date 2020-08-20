@@ -7,10 +7,12 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
+// PodBuilder holds the client to access the k8s api
 type PodBuilder struct {
 	Client *client.Client
 }
 
+// Pod holds the pod information for the graph
 type Pod struct {
 	Name            string
 	Labels          map[string]string
@@ -19,13 +21,14 @@ type Pod struct {
 	OwnerReferences []map[string]string
 }
 
+// NewPodBuilder returns a new PodBuilder struct
 func NewPodBuilder(client *client.Client) *PodBuilder {
 	return &PodBuilder{
 		Client: client,
 	}
 }
 
-// GetPod returns the pod information for the graph
+// GetPod returns the information of a pod that matches the given name
 func (p *PodBuilder) GetPod(name string) (Pod, error) {
 	pod, err := p.Client.GetPod(name)
 	if err != nil {
@@ -61,6 +64,7 @@ func (p *PodBuilder) GetPod(name string) (Pod, error) {
 	}, nil
 }
 
+// GetPods returns the information of a list of pods that match the given service selector map
 func (p *PodBuilder) GetPods(selector map[string]string) ([]Pod, error) {
 	if selector == nil {
 		return []Pod{}, nil

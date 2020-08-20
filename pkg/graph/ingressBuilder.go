@@ -6,10 +6,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// IngressBuilder holds the client to access the k8s api
 type IngressBuilder struct {
 	Client *client.Client
 }
 
+// Ingress holds the ingress information for the graph
 type Ingress struct {
 	Name    string
 	Host    string
@@ -17,13 +19,15 @@ type Ingress struct {
 	Service string
 }
 
+// NewIngressBuilder returns a new IngressBuilder struct
 func NewIngressBuilder(client *client.Client) *IngressBuilder {
 	return &IngressBuilder{
 		Client: client,
 	}
 }
 
-func (i *IngressBuilder) GetIngress(name string) ([]Ingress, error) {
+// GetIngressBackends returns the backend services of an ingress that matches the given name
+func (i *IngressBuilder) GetIngressBackends(name string) ([]Ingress, error) {
 	ingress, err := i.Client.GetIngress(name)
 	if err != nil {
 		return []Ingress{}, err
@@ -45,7 +49,8 @@ func (i *IngressBuilder) GetIngress(name string) ([]Ingress, error) {
 	return ingresses, nil
 }
 
-func (i *IngressBuilder) GetIngresses(services []Service, options metav1.ListOptions) ([]Ingress, error) {
+// GetAllIngressBackends returns the backend services of all ingresses that match the given list of service names
+func (i *IngressBuilder) GetAllIngressBackends(services []Service, options metav1.ListOptions) ([]Ingress, error) {
 	ingresses, err := i.Client.GetIngresses(options)
 	if err != nil {
 		return []Ingress{}, err
