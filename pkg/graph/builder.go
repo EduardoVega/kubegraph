@@ -1,259 +1,258 @@
 package graph
 
 import (
+	"context"
 	"fmt"
-	"kube-graph/pkg/client"
 	"strings"
 
-	"github.com/awalterschulze/gographviz"
+	"k8s.io/client-go/dynamic"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/klog/v2"
 )
 
 // Builder holds the information to build the graph
 type Builder struct {
-	Client *client.Client
-	Kind   string
-	Name   string
-	Graph  *Graph
+	Client    dynamic.Interface
+	Namespace string
+	Kind      string
+	Name      string
+	Graph     *Graph
 }
 
 // Graph holds the k8s objects for the graph
 type Graph struct {
-	Pods      []Pod
-	Services  []Service
-	Ingresses []Ingress
+	Objs []unstructured.Unstructured
 }
 
 // NewBuilder returns a new object struct
-func NewBuilder(client *client.Client, kind string, name string) *Builder {
+func NewBuilder(client dynamic.Interface, namespace, kind, name string) *Builder {
 	return &Builder{
-		Client: client,
-		Kind:   kind,
-		Name:   name,
-		Graph:  &Graph{},
+		Client:    client,
+		Namespace: namespace,
+		Kind:      kind,
+		Name:      name,
+		Graph:     &Graph{},
 	}
 }
 
 // Build gets all the information required to build the graph
 func (b *Builder) Build() error {
-	// Get initial object
-	err := GetInitialObject(b.Client, b.Graph, b.Kind, b.Name)
+	klog.V(1).Infoln("build the graph")
+
+	err := GetObject(b.Client, b.Graph, b.Namespace, b.Kind, b.Name)
 	if err != nil {
 		return err
 	}
 
-	// Get related objects
-	err = GetRelatedObjects(b.Client, b.Graph, b.Kind)
+	err = GetRelatedObjects(b.Client, b.Graph, b.Namespace, b.Kind, b.Name)
 	if err != nil {
 		return err
 	}
 
-	dotg, err := BuildDOTGraph(b.Graph)
-	if err != nil {
-		return err
-	}
+	fmt.Println(b.Graph.Objs)
 
-	fmt.Println(dotg)
+	// dotg, err := BuildDOTGraph(b.Graph)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// fmt.Println(dotg)
 
 	return nil
 }
 
-// GetInitialObject gets the initial object information for the graph
-func GetInitialObject(client *client.Client, graph *Graph, kind, name string) error {
-	switch kind {
-	case "pod":
-		podBuilder := NewPodBuilder(client)
-		pod, err := podBuilder.GetPod(name)
+// GetObject gets the searched object
+func GetObject(client dynamic.Interface, graph *Graph, namespace, kind, name string) error {
+	klog.V(1).Infoln("get initial object")
+
+	gvr, err := GetGroupVersionResource(kind)
+	if err != nil {
+		return err
+	}
+
+	var ri dynamic.ResourceInterface
+	ri = client.Resource(gvr).Namespace(namespace)
+
+	obj, err := ri.Get(context.TODO(), name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	graph.Objs = append(graph.Objs, *obj)
+
+	return nil
+}
+
+// GetRelatedObjects gets the related objects
+func GetRelatedObjects(client dynamic.Interface, graph *Graph, namespace, kind, name string) error {
+	klog.V(1).Infoln("get information of the objects related to the initial object")
+
+	gvrList := GetAllGroupVersionResourcesExcept(kind)
+
+	for _, gvr := range gvrList {
+		var ri dynamic.ResourceInterface
+
+		ri = client.Resource(gvr).Namespace(namespace)
+
+		objList, err := ri.List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
 
-		graph.Pods = []Pod{pod}
-
-	case "service":
-		serviceBuilder := NewServiceBuilder(client)
-		service, err := serviceBuilder.GetService(name)
-		if err != nil {
-			return err
+		for _, obj := range objList.Items {
+			graph.Objs = append(graph.Objs, obj)
 		}
-
-		graph.Services = []Service{service}
-
-	case "ingress":
-		ingressBuilder := NewIngressBuilder(client)
-		ingresses, err := ingressBuilder.GetIngressBackends(name)
-		if err != nil {
-			return err
-		}
-
-		graph.Ingresses = ingresses
-
-	default:
-		return fmt.Errorf("TYPE not supported. Run: kubectl graph -h")
-
 	}
 
 	return nil
 }
 
-// GetRelatedObjects gets the related objects information for the graph
-func GetRelatedObjects(client *client.Client, graph *Graph, kind string) error {
-	switch kind {
-	case "pod":
-		serviceBuilder := NewServiceBuilder(client)
-		services, err := serviceBuilder.GetServices(graph.Pods[0].Labels, metav1.ListOptions{})
-		if err != nil {
-			return err
-		}
+func GetGroupVersionResource(kind string) (schema.GroupVersionResource, error) {
+	if gvr, ok := GetSupportedGroupVersionResources()[kind]; ok {
+		return gvr, nil
+	}
 
-		graph.Services = services
+	return schema.GroupVersionResource{}, fmt.Errorf("kind '%s' not found in supported GroupVersionResources", kind)
+}
 
-		ingressBuilder := NewIngressBuilder(client)
-		ingresses, err := ingressBuilder.GetAllIngressBackends(graph.Services, metav1.ListOptions{})
-		if err != nil {
-			return err
-		}
+func GetAllGroupVersionResourcesExcept(kind string) []schema.GroupVersionResource {
+	gvrList := []schema.GroupVersionResource{}
 
-		graph.Ingresses = ingresses
-
-	case "service":
-		podBuilder := NewPodBuilder(client)
-		pods, err := podBuilder.GetPods(graph.Services[0].Selector)
-		if err != nil {
-			return err
-		}
-
-		graph.Pods = pods
-
-		ingressBuilder := NewIngressBuilder(client)
-		ingresses, err := ingressBuilder.GetAllIngressBackends(graph.Services, metav1.ListOptions{})
-		if err != nil {
-			return err
-		}
-
-		graph.Ingresses = ingresses
-
-	case "ingress":
-		for _, ingress := range graph.Ingresses {
-			serviceBuilder := NewServiceBuilder(client)
-			service, err := serviceBuilder.GetService(ingress.Service)
-			if err != nil {
-				if !strings.Contains(err.Error(), "not found") {
-					return err
-				}
-			} else {
-				graph.Services = append(graph.Services, service)
-			}
-		}
-
-		graph.Pods = []Pod{}
-		for _, service := range graph.Services {
-			podBuilder := NewPodBuilder(client)
-			pods, err := podBuilder.GetPods(service.Selector)
-			if err != nil {
-				return err
-			}
-
-			for _, pod := range pods {
-				graph.Pods = append(graph.Pods, pod)
-			}
+	for key, value := range GetSupportedGroupVersionResources() {
+		if key != kind {
+			gvrList = append(gvrList, value)
 		}
 	}
 
-	return nil
+	return gvrList
+}
+
+func GetAllGroupVersionResources() []schema.GroupVersionResource {
+	gvrList := []schema.GroupVersionResource{}
+
+	for _, value := range GetSupportedGroupVersionResources() {
+		gvrList = append(gvrList, value)
+	}
+
+	return gvrList
+}
+
+func GetSupportedGroupVersionResources() map[string]schema.GroupVersionResource {
+	return map[string]schema.GroupVersionResource{
+		"pod": schema.GroupVersionResource{
+			Group:    "",
+			Version:  "v1",
+			Resource: "pods",
+		},
+		"service": schema.GroupVersionResource{
+			Group:    "",
+			Version:  "v1",
+			Resource: "services",
+		},
+		"ingress": schema.GroupVersionResource{
+			Group:    "networking.k8s.io",
+			Version:  "v1beta1",
+			Resource: "ingresses",
+		},
+	}
 }
 
 // BuildDOTGraph returns a DOT graph populated with obtained k8s objects
-func BuildDOTGraph(graph *Graph) (string, error) {
-	dotGraph := gographviz.NewGraph()
+// func BuildDOTGraph(graph *Graph) (string, error) {
+// 	klog.V(1).Infoln("build the dot graph")
 
-	err := dotGraph.SetName("G")
-	if err != nil {
-		return "", err
-	}
+// 	dotGraph := gographviz.NewGraph()
 
-	err = dotGraph.SetDir(true)
-	if err != nil {
-		return "", err
-	}
+// 	err := dotGraph.SetName("G")
+// 	if err != nil {
+// 		return "", err
+// 	}
 
-	// Add pod nodes
-	for _, pod := range graph.Pods {
+// 	err = dotGraph.SetDir(true)
+// 	if err != nil {
+// 		return "", err
+// 	}
 
-		err = dotGraph.AddNode("G", GetPrettyString(pod.Name), map[string]string{"label": "\"pod: " + pod.Name + "\""})
-		if err != nil {
-			return "", err
-		}
+// 	// Add pod nodes
+// 	for _, pod := range graph.Pods {
 
-		for _, container := range pod.Containers {
-			err = dotGraph.AddNode("G", GetPrettyString(pod.Name+container), map[string]string{"label": "\"container: " + container + "\""})
-			if err != nil {
-				return "", err
-			}
+// 		err = dotGraph.AddNode("G", GetPrettyString(pod.Name), map[string]string{"label": "\"pod: " + pod.Name + "\""})
+// 		if err != nil {
+// 			return "", err
+// 		}
 
-			dotGraph.AddEdge(GetPrettyString(pod.Name), GetPrettyString(pod.Name+container), true, nil)
-		}
+// 		for _, container := range pod.Containers {
+// 			err = dotGraph.AddNode("G", GetPrettyString(pod.Name+container), map[string]string{"label": "\"container: " + container + "\""})
+// 			if err != nil {
+// 				return "", err
+// 			}
 
-		for _, initContainer := range pod.InitContainers {
-			err = dotGraph.AddNode("G", GetPrettyString(pod.Name+initContainer), map[string]string{"label": "\"initcontainer: " + initContainer + "\""})
-			if err != nil {
-				return "", err
-			}
+// 			dotGraph.AddEdge(GetPrettyString(pod.Name), GetPrettyString(pod.Name+container), true, nil)
+// 		}
 
-			dotGraph.AddEdge(GetPrettyString(pod.Name), GetPrettyString(pod.Name+initContainer), true, nil)
-		}
-	}
+// 		for _, initContainer := range pod.InitContainers {
+// 			err = dotGraph.AddNode("G", GetPrettyString(pod.Name+initContainer), map[string]string{"label": "\"initcontainer: " + initContainer + "\""})
+// 			if err != nil {
+// 				return "", err
+// 			}
 
-	// Add service nodes
-	for _, service := range graph.Services {
-		err := dotGraph.AddNode("G", GetPrettyString(service.Name), map[string]string{"label": "\"service: " + service.Name + "\""})
-		if err != nil {
-			return "", err
-		}
+// 			dotGraph.AddEdge(GetPrettyString(pod.Name), GetPrettyString(pod.Name+initContainer), true, nil)
+// 		}
+// 	}
 
-		for _, pod := range graph.Pods {
-			addService := true
-			for key, value := range service.Selector {
-				if _, ok := pod.Labels[key]; !ok {
-					addService = false
-					break
-				}
+// 	// Add service nodes
+// 	for _, service := range graph.Services {
+// 		err := dotGraph.AddNode("G", GetPrettyString(service.Name), map[string]string{"label": "\"service: " + service.Name + "\""})
+// 		if err != nil {
+// 			return "", err
+// 		}
 
-				if value != pod.Labels[key] {
-					addService = false
-					break
-				}
-			}
+// 		for _, pod := range graph.Pods {
+// 			addService := true
+// 			for key, value := range service.Selector {
+// 				if _, ok := pod.Labels[key]; !ok {
+// 					addService = false
+// 					break
+// 				}
 
-			// If service selector is nil, it does not have pods
-			if addService && service.Selector != nil {
-				err := dotGraph.AddEdge(GetPrettyString(service.Name), GetPrettyString(pod.Name), true, nil)
-				if err != nil {
-					return "", err
-				}
-			}
-		}
-	}
+// 				if value != pod.Labels[key] {
+// 					addService = false
+// 					break
+// 				}
+// 			}
 
-	// Add ingress nodes
-	for _, ingress := range graph.Ingresses {
-		err := dotGraph.AddNode("G", GetPrettyString(ingress.Name), map[string]string{"label": "\"ingress: " + ingress.Name + "\""})
-		if err != nil {
-			return "", err
-		}
+// 			// If service selector is nil, it does not have pods
+// 			if addService && service.Selector != nil {
+// 				err := dotGraph.AddEdge(GetPrettyString(service.Name), GetPrettyString(pod.Name), true, nil)
+// 				if err != nil {
+// 					return "", err
+// 				}
+// 			}
+// 		}
+// 	}
 
-		for _, service := range graph.Services {
-			if ingress.Service == service.Name {
-				err := dotGraph.AddEdge(GetPrettyString(ingress.Name), GetPrettyString(service.Name), true, nil)
-				if err != nil {
-					return "", err
-				}
-			}
-		}
-	}
+// 	// Add ingress nodes
+// 	for _, ingress := range graph.Ingresses {
+// 		err := dotGraph.AddNode("G", GetPrettyString(ingress.Name), map[string]string{"label": "\"ingress: " + ingress.Name + "\""})
+// 		if err != nil {
+// 			return "", err
+// 		}
 
-	return dotGraph.String(), nil
-}
+// 		for _, service := range graph.Services {
+// 			if ingress.Service == service.Name {
+// 				err := dotGraph.AddEdge(GetPrettyString(ingress.Name), GetPrettyString(service.Name), true, nil)
+// 				if err != nil {
+// 					return "", err
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	return dotGraph.String(), nil
+// }
 
 // GetPrettyString returns a pretty string that can be used as a dot node name
 func GetPrettyString(ugly string) string {

@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"kube-graph/pkg/client"
 	"kube-graph/pkg/graph"
 
 	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
+
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/dynamic"
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // support for cloud providers auth
 )
 
@@ -15,10 +16,11 @@ import (
 type Options struct {
 	ConfigFlags *genericclioptions.ConfigFlags
 	genericclioptions.IOStreams
-	Client   *client.Client
-	Name     string
-	Type     string
-	DotGraph bool
+	Client    dynamic.Interface
+	Namespace string
+	Name      string
+	Kind      string
+	DotGraph  bool
 }
 
 // NewOptions returns an Options struct
@@ -34,14 +36,14 @@ func NewGraphCmd(iostreams genericclioptions.IOStreams) *cobra.Command {
 	o := NewOptions(iostreams)
 
 	c := &cobra.Command{
-		Use:   "graph [TYPE] [NAME] [flags]",
-		Short: "Print or create a graph to visualize the relation between kubernetes objects",
+		Use:   "graph [KIND] [NAME] [flags]",
+		Short: "Print a tree or dot graph to visualize the relation between kubernetes objects",
 		Example: `
-# Print a graph that shows all kubernetes objects that are related to the service service-foo
+# Print a tree graph that shows all kubernetes objects that are related to the service service-foo
 kubectl graph service service-foo
 		
-# Create a DOT graph that shows all kubernetes objects that are related to the ingress ingress-bar
-kubectl graph ingress ingress-bar --dot-graph
+# Print a DOT graph that shows all kubernetes objects that are related to the ingress ingress-bar
+kubectl graph ingress ingress-bar --dot
 `,
 		SilenceUsage: true,
 		RunE: func(c *cobra.Command, args []string) error {
@@ -59,7 +61,7 @@ kubectl graph ingress ingress-bar --dot-graph
 		},
 	}
 
-	c.Flags().BoolVar(&o.DotGraph, "dot-graph", o.DotGraph, "If true, a DOT graph file will be created instead of printing to stdout")
+	c.Flags().BoolVar(&o.DotGraph, "dot", o.DotGraph, "If true, a DOT graph will be printed to stdout")
 	o.ConfigFlags.AddFlags(c.Flags())
 
 	return c
@@ -67,9 +69,11 @@ kubectl graph ingress ingress-bar --dot-graph
 
 // Complete adds values to Option attributes
 func (o *Options) Complete(cmd *cobra.Command, args []string) error {
+	klog.V(1).Infoln("add information to Options struct")
+
 	// Get Type and Name
 	if len(args) >= 2 {
-		o.Type = args[0]
+		o.Kind = args[0]
 		o.Name = args[1]
 	}
 
@@ -88,26 +92,35 @@ func (o *Options) Complete(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	o.Namespace = namespace
+
 	// Get Client
 	restConfig, err := o.ConfigFlags.ToRESTConfig()
 	if err != nil {
 		return err
 	}
 
-	clientset, err := kubernetes.NewForConfig(restConfig)
+	dynClient, err := dynamic.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
 
-	o.Client = client.NewClient(clientset, namespace)
+	// clientset, err := kubernetes.NewForConfig(restConfig)
+	// if err != nil {
+	// 	return err
+	// }
+
+	o.Client = dynClient
 
 	return nil
 }
 
 // Validate ensures all expected data is available
 func (o *Options) Validate(args []string) error {
+	klog.V(1).Infoln("validate arguments")
+
 	if len(args) != 2 {
-		return fmt.Errorf("requires TYPE and NAME arguments. Run: kubectl graph -h")
+		return fmt.Errorf("requires KIND and NAME arguments. Run: kubectl graph -h")
 	}
 
 	return nil
@@ -115,8 +128,9 @@ func (o *Options) Validate(args []string) error {
 
 // Run creates a new resource and starts the data gathering to build the graph
 func (o *Options) Run() error {
+	klog.V(1).Infoln("execute the build function of the Builder")
 
-	b := graph.NewBuilder(o.Client, o.Type, o.Name)
+	b := graph.NewBuilder(o.Client, o.Namespace, o.Kind, o.Name)
 
 	err := b.Build()
 	if err != nil {
