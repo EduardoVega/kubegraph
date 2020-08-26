@@ -2,8 +2,8 @@ package graph
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+
 	"strings"
 
 	"k8s.io/client-go/dynamic"
@@ -20,36 +20,30 @@ type Builder struct {
 	Namespace string
 	Kind      string
 	Name      string
-	Graph     *Graph
+	ObjData
 }
 
 // Graph holds the objects of the graph
-type Graph struct {
-	Obj         unstructured.Unstructured
-	RelatedObjs []RelatedObj
+// type Graph struct {
+// 	Obj         unstructured.Unstructured
+// 	RelatedObjs []RelatedObj
+// }
+
+// ObjData holds the object and related objects data
+type ObjData struct {
+	Obj             unstructured.Unstructured
+	Hierarchy       string
+	RelatedObjsData []ObjData
 }
 
-// OwnerObj holds the object obtained from ownerRefences
-type OwnerObj struct {
-	Obj       unstructured.Unstructured
-	OwnerObjs []OwnerObj
-}
-
-// RelatedObj holds the related objects
-type RelatedObj struct {
-	Objs        []unstructured.Unstructured
-	Hierarchy   string
-	RelatedObjs []RelatedObj
-}
-
-// NewBuilder returns a new object struct
+// NewBuilder returns a new builder struct
 func NewBuilder(client dynamic.Interface, namespace, kind, name string) *Builder {
 	return &Builder{
 		Client:    client,
 		Namespace: namespace,
 		Kind:      kind,
 		Name:      name,
-		Graph:     &Graph{},
+		ObjData:   ObjData{},
 	}
 }
 
@@ -57,20 +51,20 @@ func NewBuilder(client dynamic.Interface, namespace, kind, name string) *Builder
 func (b *Builder) Build() error {
 	klog.V(1).Infoln("get objects to build the graph")
 
-	obj, err := GetObject(b.Client, b.Namespace, b.Kind, b.Name)
+	o, err := b.GetObject(b.Namespace, b.Kind, b.Name)
 	if err != nil {
 		return err
 	}
-	klog.V(3).Infof("object %s", GetJSON(obj))
-	b.Graph.Obj = obj
+	b.ObjData.Obj = o
+	b.ObjData.Hierarchy = ""
 
-	relatedObjs, err := GetRelatedObjects(b.Client, []string{}, b.Namespace, b.Kind)
+	r, err := b.GetRelatedObjects([]string{}, b.ObjData.Obj, b.Namespace)
 	if err != nil {
 		return err
 	}
-	klog.V(3).Infof("related objects %s", GetJSON(relatedObjs))
-	b.Graph.RelatedObjs = relatedObjs
+	b.ObjData.RelatedObjsData = r
 
+	klog.V(4).Infof("object data JSON %s", ToJSON(b.ObjData))
 	// ownerObjs, err := GetOwnerObjects(b.Client, b.Graph.Obj, b.Namespace)
 	// if err != nil {
 	// 	return err
@@ -94,18 +88,19 @@ func (b *Builder) Build() error {
 }
 
 // GetObject returns the requested object
-func GetObject(client dynamic.Interface, namespace, kind, name string) (unstructured.Unstructured, error) {
-	klog.V(1).Infoln("get requested object")
+func (b *Builder) GetObject(namespace, kind, name string) (unstructured.Unstructured, error) {
+	klog.V(1).Infof("get main object '%s'", kind)
+	defer klog.V(2).Infof("get main object '%s' has finished", kind)
 
 	var obj *unstructured.Unstructured
 
-	gvr, err := GetGroupVersionResource(kind)
+	gvr, err := b.GetGroupVersionResource(kind)
 	if err != nil {
 		return *obj, err
 	}
 
 	var ri dynamic.ResourceInterface
-	ri = client.Resource(gvr).Namespace(namespace)
+	ri = b.Client.Resource(gvr).Namespace(namespace)
 
 	obj, err = ri.Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
@@ -115,111 +110,64 @@ func GetObject(client dynamic.Interface, namespace, kind, name string) (unstruct
 	return *obj, nil
 }
 
-// GetOwnerObjects returns the owner objects
-func GetOwnerObjects(client dynamic.Interface, obj unstructured.Unstructured, namespace string) ([]OwnerObj, error) {
-	klog.V(1).Infoln("get owner objects")
+// GetRelatedObjects returns the list of upper and lower related objects
+func (b *Builder) GetRelatedObjects(processedObjs []string, obj unstructured.Unstructured, namespace string) ([]ObjData, error) {
+	klog.V(1).Infof("get related objects of kind '%s'", obj.GetKind())
+	defer klog.V(2).Infof("get related objects of kind '%s' has finished", obj.GetKind())
 
-	ownerObjs := []OwnerObj{}
+	f := NewFilter()
+	relatedObjs := []ObjData{}
+	relatedKinds := b.GetRelatedKinds(strings.ToLower(obj.GetKind()))
+	processedObjs = append(processedObjs, strings.ToLower(obj.GetKind()))
 
-	for _, ownerReference := range obj.GetOwnerReferences() {
-		gvr, err := GetGroupVersionResource(strings.ToLower(ownerReference.Kind))
-		if err != nil {
-			return ownerObjs, nil // Not supported GVR
-		}
+	for hierarchy, kinds := range relatedKinds {
+		klog.V(2).Infof("'%s' hierarchy '%s'", obj.GetKind(), hierarchy)
 
-		var ri dynamic.ResourceInterface
-		ri = client.Resource(gvr).Namespace(namespace)
-
-		ownerObj, err := ri.Get(context.TODO(), ownerReference.Name, metav1.GetOptions{})
-		if err != nil {
-			return ownerObjs, err
-		}
-
-		ob := OwnerObj{}
-		ob.Obj = *ownerObj
-
-		innerOwnerObjs, err := GetOwnerObjects(client, *ownerObj, namespace)
-		if err != nil {
-			return ownerObjs, err
-		}
-
-		ob.OwnerObjs = innerOwnerObjs
-		ownerObjs = append(ownerObjs, ob)
-	}
-
-	return ownerObjs, nil
-}
-
-// GetRelatedObjects
-func GetRelatedObjects(client dynamic.Interface, processedObjs []string, namespace, kind string) ([]RelatedObj, error) {
-	relatedObjs := []RelatedObj{}
-	rks := GetRelatedKinds(kind)
-	processedObjs = append(processedObjs, kind)
-
-	for hierarchy, kinds := range rks {
-
-		for _, relatedKind := range kinds {
+		for _, k := range kinds {
+			klog.V(2).Infof("related object kind '%s'", k)
 			// avoid calling the same obj multiple times
-			if ContainsKind(relatedKind, processedObjs) {
+			if Contains(k, processedObjs) {
+				klog.V(2).Infoln("skip")
 				continue
 			}
 
-			gvr, err := GetGroupVersionResource(relatedKind)
+			gvr, err := b.GetGroupVersionResource(k)
 			if err != nil {
 				return relatedObjs, err
 			}
 
 			var ri dynamic.ResourceInterface
 
-			ri = client.Resource(gvr).Namespace(namespace)
+			ri = b.Client.Resource(gvr).Namespace(namespace)
 
 			objList, err := ri.List(context.TODO(), metav1.ListOptions{})
 			if err != nil {
 				return relatedObjs, err
 			}
 
-			relatedObj := RelatedObj{}
-			relatedObj.Objs = objList.Items
-			relatedObj.Hierarchy = hierarchy
-
-			innerRelatedObjs, err := GetRelatedObjects(client, processedObjs, namespace, relatedKind)
-			if err != nil {
-				return relatedObjs, err
+			for _, o := range objList.Items {
+				klog.V(2).Infof("filter related object '%s %s'", o.GetKind(), o.GetName())
+				if f.FilterObj(obj, o) {
+					klog.V(2).Infof("OK")
+					r := ObjData{}
+					r.Obj = o
+					r.Hierarchy = hierarchy
+					innerRelatedObjs, err := b.GetRelatedObjects(processedObjs, o, namespace)
+					if err != nil {
+						return relatedObjs, err
+					}
+					r.RelatedObjsData = innerRelatedObjs
+					relatedObjs = append(relatedObjs, r)
+				}
 			}
-
-			relatedObj.RelatedObjs = innerRelatedObjs
-
-			relatedObjs = append(relatedObjs, relatedObj)
 		}
 	}
 
 	return relatedObjs, nil
 }
 
-func ContainsKind(kind string, processedkinds []string) bool {
-	for _, pk := range processedkinds {
-		if pk == kind {
-			return true
-		}
-	}
-
-	return false
-}
-
-// GetJSON returns a JSON string
-func GetJSON(obj interface{}) string {
-	klog.V(2).Infoln("get JSON from object")
-
-	bytes, err := json.Marshal(obj)
-	if err != nil {
-		klog.Warningf("Object could not be converted to JSON. Error %s", err)
-		return ""
-	}
-
-	return string(bytes)
-}
-
-func GetRelatedKinds(kind string) map[string][]string {
+// GetRelatedKinds returns a map of the related upper and lower kinds
+func (b *Builder) GetRelatedKinds(kind string) map[string][]string {
 	relatedkinds := map[string][]string{}
 
 	switch kind {
@@ -258,8 +206,8 @@ func GetRelatedKinds(kind string) map[string][]string {
 	return relatedkinds
 }
 
-// GetGroupVersionResource returns the correct group version resource
-func GetGroupVersionResource(kind string) (schema.GroupVersionResource, error) {
+// GetGroupVersionResource returns the correct group version resource struct
+func (b *Builder) GetGroupVersionResource(kind string) (schema.GroupVersionResource, error) {
 	var gvr schema.GroupVersionResource
 
 	gvrMap := map[string]schema.GroupVersionResource{
@@ -306,6 +254,47 @@ func GetGroupVersionResource(kind string) (schema.GroupVersionResource, error) {
 
 	return gvr, fmt.Errorf("kind '%s' not found in supported GroupVersionResources", kind)
 }
+
+// OwnerObj holds the object obtained from ownerRefences
+// type OwnerObj struct {
+// 	Obj       unstructured.Unstructured
+// 	OwnerObjs []OwnerObj
+// }
+
+// GetOwnerObjects returns the owner objects
+// func GetOwnerObjects(client dynamic.Interface, obj unstructured.Unstructured, namespace string) ([]OwnerObj, error) {
+// 	klog.V(1).Infoln("get owner objects")
+
+// 	ownerObjs := []OwnerObj{}
+
+// 	for _, ownerReference := range obj.GetOwnerReferences() {
+// 		gvr, err := GetGroupVersionResource(strings.ToLower(ownerReference.Kind))
+// 		if err != nil {
+// 			return ownerObjs, nil // Not supported GVR
+// 		}
+
+// 		var ri dynamic.ResourceInterface
+// 		ri = client.Resource(gvr).Namespace(namespace)
+
+// 		ownerObj, err := ri.Get(context.TODO(), ownerReference.Name, metav1.GetOptions{})
+// 		if err != nil {
+// 			return ownerObjs, err
+// 		}
+
+// 		ob := OwnerObj{}
+// 		ob.Obj = *ownerObj
+
+// 		innerOwnerObjs, err := GetOwnerObjects(client, *ownerObj, namespace)
+// 		if err != nil {
+// 			return ownerObjs, err
+// 		}
+
+// 		ob.OwnerObjs = innerOwnerObjs
+// 		ownerObjs = append(ownerObjs, ob)
+// 	}
+
+// 	return ownerObjs, nil
+// }
 
 // BuildDOTGraph returns a DOT graph populated with obtained k8s objects
 // func BuildDOTGraph(graph *Graph) (string, error) {
@@ -400,8 +389,3 @@ func GetGroupVersionResource(kind string) (schema.GroupVersionResource, error) {
 
 // 	return dotGraph.String(), nil
 // }
-
-// GetPrettyString returns a pretty string that can be used as a dot node name
-func GetPrettyString(ugly string) string {
-	return strings.ReplaceAll(ugly, "-", "")
-}
