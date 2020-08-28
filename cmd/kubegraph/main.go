@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"kube-graph/pkg/cmd"
+	"kubegraph/pkg/cmd"
 	"os"
 
 	"github.com/spf13/pflag"
@@ -26,8 +26,8 @@ func init() {
 
 func main() {
 	defer klog.Flush()
-	graphCmd := cmd.NewGraphCmd(genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr})
-	if err := graphCmd.Execute(); err != nil {
+	c := cmd.NewCmd(genericclioptions.IOStreams{In: os.Stdin, Out: os.Stdout, ErrOut: os.Stderr})
+	if err := c.Execute(); err != nil {
 		os.Exit(1)
 	}
 }

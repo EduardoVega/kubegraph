@@ -7,25 +7,30 @@ import (
 	"github.com/awalterschulze/gographviz"
 )
 
+// Printer holds the object data and graph type to print
 type Printer struct {
 	ObjData
-	Out io.Writer
+	DotGraph bool
+	Out      io.Writer
 }
 
-func NewPrinter(objData ObjData, out io.Writer) *Printer {
+// NewPrinter returns a new Printer struct
+func NewPrinter(objData ObjData, dotGraph bool, out io.Writer) *Printer {
 	return &Printer{
-		ObjData: objData,
-		Out:     out,
+		ObjData:  objData,
+		DotGraph: dotGraph,
+		Out:      out,
 	}
 }
 
-func (p *Printer) Print(printerType string) (err error) {
+// Print prints the tree or dot graph
+func (p *Printer) Print() (err error) {
 	var g string
 
-	if printerType == "dot" {
-		g, err = p.PrintDotGraph()
+	if p.DotGraph {
+		g, err = CreateDotGraph(p.ObjData)
 	} else {
-		g, err = p.PrintTreeGraph()
+		g, err = CreateTreeGraph(p.ObjData)
 	}
 
 	if err != nil {
@@ -37,11 +42,13 @@ func (p *Printer) Print(printerType string) (err error) {
 	return
 }
 
-func (p *Printer) PrintTreeGraph() (string, error) {
+// CreateTreeGraph returns a string holding the tree graph
+func CreateTreeGraph(o ObjData) (string, error) {
 	return "", nil
 }
 
-func (p *Printer) PrintDotGraph() (string, error) {
+// CreateDotGraph returns a string holding the dot graph
+func CreateDotGraph(o ObjData) (string, error) {
 	g := gographviz.NewGraph()
 
 	err := g.SetName("W")
@@ -53,7 +60,7 @@ func (p *Printer) PrintDotGraph() (string, error) {
 		return "", err
 	}
 
-	_, err = CreateNodesEdges(p.ObjData, g)
+	_, err = CreateNodesEdges(o, g)
 	if err != nil {
 		return "", err
 	}
@@ -61,6 +68,7 @@ func (p *Printer) PrintDotGraph() (string, error) {
 	return g.String(), nil
 }
 
+// CreateNodesEdges creates dot nodes using the objects and dot edges using the relationships between the objects
 func CreateNodesEdges(o ObjData, g *gographviz.Graph) (string, error) {
 	err := g.AddNode("W", GetPrettyString(o.Obj.GetKind()+o.Obj.GetName()), map[string]string{"label": "\"" + o.Obj.GetKind() + ": " + o.Obj.GetName() + "\""})
 	if err != nil {

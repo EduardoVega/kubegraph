@@ -1,4 +1,4 @@
-module kube-graph
+module kubegraph
 
 go 1.13
 

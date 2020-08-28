@@ -3,7 +3,7 @@ package graph
 import (
 	"context"
 	"fmt"
-	"os"
+	"io"
 
 	"strings"
 
@@ -21,6 +21,8 @@ type Builder struct {
 	Namespace string
 	Kind      string
 	Name      string
+	Out       io.Writer
+	DotGraph  bool
 	ObjData
 }
 
@@ -32,9 +34,11 @@ type ObjData struct {
 }
 
 // NewBuilder returns a new builder struct
-func NewBuilder(client dynamic.Interface, namespace, kind, name string) *Builder {
+func NewBuilder(client dynamic.Interface, out io.Writer, dotGraph bool, namespace, kind, name string) *Builder {
 	return &Builder{
 		Client:    client,
+		Out:       out,
+		DotGraph:  dotGraph,
 		Namespace: namespace,
 		Kind:      kind,
 		Name:      name,
@@ -61,8 +65,8 @@ func (b *Builder) Build() error {
 
 	klog.V(4).Infof("object data JSON %s", ToJSON(b.ObjData))
 
-	p := NewPrinter(b.ObjData, os.Stdout)
-	p.Print("dot")
+	p := NewPrinter(b.ObjData, b.DotGraph, b.Out)
+	p.Print()
 	if err != nil {
 		return err
 	}
