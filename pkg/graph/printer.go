@@ -30,7 +30,8 @@ func (p *Printer) Print() (err error) {
 	if p.DotGraph {
 		g, err = CreateDotGraph(p.ObjData)
 	} else {
-		g, err = CreateTreeGraph(p.ObjData)
+		g = CreateTreeGraph(p.ObjData, "", "")
+		g += "\n"
 	}
 
 	if err != nil {
@@ -43,8 +44,29 @@ func (p *Printer) Print() (err error) {
 }
 
 // CreateTreeGraph returns a string holding the tree graph
-func CreateTreeGraph(o ObjData) (string, error) {
-	return "", nil
+func CreateTreeGraph(o ObjData, graph string, format string) string {
+
+	if o.Hierarchy == "upper" {
+		graph = fmt.Sprintf("%s┌── [%s] %s", format, o.Obj.GetKind(), o.Obj.GetName())
+	} else if o.Hierarchy == "lower" {
+		graph = fmt.Sprintf("%s└── [%s] %s", format, o.Obj.GetKind(), o.Obj.GetName())
+	} else {
+		graph = fmt.Sprintf("[%s] %s", o.Obj.GetKind(), o.Obj.GetName())
+	}
+
+	format = format + "\t"
+
+	for _, r := range o.RelatedObjsData {
+		relatedGraph := CreateTreeGraph(r, graph, format)
+
+		if r.Hierarchy == "upper" {
+			graph = relatedGraph + "\n" + graph
+		} else {
+			graph = graph + "\n" + relatedGraph
+		}
+	}
+
+	return graph
 }
 
 // CreateDotGraph returns a string holding the dot graph
