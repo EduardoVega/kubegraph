@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"kube-graph/pkg/graph"
+	"kubegraph/pkg/graph"
 
 	"github.com/spf13/cobra"
 	"k8s.io/klog/v2"
@@ -31,8 +31,8 @@ func NewOptions(iostreams genericclioptions.IOStreams) *Options {
 	}
 }
 
-// NewGraphCmd returns a graph command
-func NewGraphCmd(iostreams genericclioptions.IOStreams) *cobra.Command {
+// NewCmd returns a new graph command
+func NewCmd(iostreams genericclioptions.IOStreams) *cobra.Command {
 	o := NewOptions(iostreams)
 
 	c := &cobra.Command{
@@ -105,11 +105,6 @@ func (o *Options) Complete(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// clientset, err := kubernetes.NewForConfig(restConfig)
-	// if err != nil {
-	// 	return err
-	// }
-
 	o.Client = dynClient
 
 	return nil
@@ -130,7 +125,7 @@ func (o *Options) Validate(args []string) error {
 func (o *Options) Run() error {
 	klog.V(1).Infoln("execute the build function of the Builder")
 
-	b := graph.NewBuilder(o.Client, o.Namespace, o.Kind, o.Name)
+	b := graph.NewBuilder(o.Client, o.Out, o.DotGraph, o.Namespace, o.Kind, o.Name)
 
 	err := b.Build()
 	if err != nil {
