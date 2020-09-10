@@ -54,7 +54,7 @@ func CreateTreeGraph(o ObjData, graph string, format string) string {
 		graph = fmt.Sprintf("[%s] %s", o.Obj.GetKind(), o.Obj.GetName())
 	}
 
-	format = format + "\t"
+	format = format + "\t\t"
 
 	for _, r := range o.RelatedObjsData {
 		relatedGraph := CreateTreeGraph(r, graph, format)

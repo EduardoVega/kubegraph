@@ -79,19 +79,17 @@ func (b *Builder) GetObject(namespace, kind, name string) (unstructured.Unstruct
 	klog.V(1).Infof("get main object '%s'", kind)
 	klog.V(2).Infof("get main object '%s' has finished", kind)
 
-	var obj *unstructured.Unstructured
-
 	gvr, err := b.GetGroupVersionResource(kind)
 	if err != nil {
-		return *obj, err
+		return unstructured.Unstructured{}, err
 	}
 
 	var ri dynamic.ResourceInterface
 	ri = b.Client.Resource(gvr).Namespace(namespace)
 
-	obj, err = ri.Get(context.TODO(), name, metav1.GetOptions{})
+	obj, err := ri.Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
-		return *obj, err
+		return unstructured.Unstructured{}, err
 	}
 
 	return *obj, nil
@@ -239,5 +237,5 @@ func (b *Builder) GetGroupVersionResource(kind string) (schema.GroupVersionResou
 		return gvr, nil
 	}
 
-	return gvr, fmt.Errorf("kind '%s' not found in supported GroupVersionResources", kind)
+	return gvr, fmt.Errorf("kind \"%s\" not supported", kind)
 }
