@@ -44,7 +44,7 @@ func (p *Printer) Print() (err error) {
 }
 
 // CreateTreeGraph returns a string holding the tree graph
-func CreateTreeGraph(o ObjData, graph string, format string) string {
+func CreateTreeGraph(o ObjData, graph, format string) string {
 
 	if o.Hierarchy == "upper" {
 		graph = fmt.Sprintf("%s┌── [%s] %s", format, o.Obj.GetKind(), o.Obj.GetName())
@@ -54,7 +54,7 @@ func CreateTreeGraph(o ObjData, graph string, format string) string {
 		graph = fmt.Sprintf("[%s] %s", o.Obj.GetKind(), o.Obj.GetName())
 	}
 
-	format = format + "\t\t"
+	format = format + "\t"
 
 	for _, r := range o.RelatedObjsData {
 		relatedGraph := CreateTreeGraph(r, graph, format)

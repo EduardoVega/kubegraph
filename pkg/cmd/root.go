@@ -37,7 +37,7 @@ func NewCmd(iostreams genericclioptions.IOStreams) *cobra.Command {
 
 	c := &cobra.Command{
 		Use:   "graph [KIND] [NAME] [flags]",
-		Short: "Print a tree or dot graph to visualize the relation between kubernetes objects",
+		Short: "Print a tree or dot graph to visualize the relationship between kubernetes objects",
 		Example: `
 # Print a tree graph that shows all kubernetes objects that are related to the service service-foo
 kubectl graph service service-foo
@@ -115,7 +115,7 @@ func (o *Options) Validate(args []string) error {
 	klog.V(1).Infoln("validate arguments")
 
 	if len(args) != 2 {
-		return fmt.Errorf("requires KIND and NAME arguments. Run: kubectl graph -h")
+		return fmt.Errorf("requires valid \"kind\" and \"name\" arguments")
 	}
 
 	return nil
