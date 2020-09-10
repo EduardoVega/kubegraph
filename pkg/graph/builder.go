@@ -28,7 +28,7 @@ type Builder struct {
 
 // ObjData holds the object and related objects data
 type ObjData struct {
-	Obj             unstructured.Unstructured
+	Obj             *unstructured.Unstructured
 	Hierarchy       string
 	RelatedObjsData []ObjData
 }
@@ -57,7 +57,7 @@ func (b *Builder) Build() error {
 	b.ObjData.Obj = o
 	b.ObjData.Hierarchy = ""
 
-	r, err := b.GetRelatedObjects([]string{}, b.ObjData.Obj, b.Namespace)
+	r, err := b.GetRelatedObjects([]string{}, *b.ObjData.Obj, b.Namespace)
 	if err != nil {
 		return err
 	}
@@ -75,26 +75,24 @@ func (b *Builder) Build() error {
 }
 
 // GetObject returns the requested object
-func (b *Builder) GetObject(namespace, kind, name string) (unstructured.Unstructured, error) {
+func (b *Builder) GetObject(namespace, kind, name string) (*unstructured.Unstructured, error) {
 	klog.V(1).Infof("get main object '%s'", kind)
 	klog.V(2).Infof("get main object '%s' has finished", kind)
 
-	var obj *unstructured.Unstructured
-
 	gvr, err := b.GetGroupVersionResource(kind)
 	if err != nil {
-		return *obj, err
+		return nil, err
 	}
 
 	var ri dynamic.ResourceInterface
 	ri = b.Client.Resource(gvr).Namespace(namespace)
 
-	obj, err = ri.Get(context.TODO(), name, metav1.GetOptions{})
+	obj, err := ri.Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
-		return *obj, err
+		return nil, err
 	}
 
-	return *obj, nil
+	return obj, nil
 }
 
 // GetRelatedObjects returns the list of upper and lower related objects
@@ -137,7 +135,7 @@ func (b *Builder) GetRelatedObjects(processedObjs []string, obj unstructured.Uns
 				if f.FilterObj(obj, o) {
 					klog.V(2).Infof("OK")
 					r := ObjData{}
-					r.Obj = o
+					r.Obj = &o
 					r.Hierarchy = hierarchy
 					innerRelatedObjs, err := b.GetRelatedObjects(processedObjs, o, namespace)
 					if err != nil {
@@ -239,5 +237,5 @@ func (b *Builder) GetGroupVersionResource(kind string) (schema.GroupVersionResou
 		return gvr, nil
 	}
 
-	return gvr, fmt.Errorf("kind '%s' not found in supported GroupVersionResources", kind)
+	return gvr, fmt.Errorf("kind \"%s\" not supported", kind)
 }
