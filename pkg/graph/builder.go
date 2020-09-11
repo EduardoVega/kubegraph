@@ -193,49 +193,50 @@ func (b *Builder) GetRelatedKinds(kind string) map[string][]string {
 
 // GetGroupVersionResource returns the correct group version resource struct
 func (b *Builder) GetGroupVersionResource(kind string) (schema.GroupVersionResource, error) {
-	var gvr schema.GroupVersionResource
-
-	gvrMap := map[string]schema.GroupVersionResource{
-		"pod": schema.GroupVersionResource{
+	switch kind {
+	case "pod", "po":
+		return schema.GroupVersionResource{
 			Group:    "",
 			Version:  "v1",
 			Resource: "pods",
-		},
-		"service": schema.GroupVersionResource{
+		}, nil
+	case "service", "svc":
+		return schema.GroupVersionResource{
 			Group:    "",
 			Version:  "v1",
 			Resource: "services",
-		},
-		"ingress": schema.GroupVersionResource{
+		}, nil
+	case "ingress", "ing":
+		return schema.GroupVersionResource{
 			Group:    "networking.k8s.io",
 			Version:  "v1beta1",
 			Resource: "ingresses",
-		},
-		"replicaset": schema.GroupVersionResource{
+		}, nil
+	case "replicaset", "rs":
+		return schema.GroupVersionResource{
 			Group:    "apps",
 			Version:  "v1",
 			Resource: "replicasets",
-		},
-		"deployment": schema.GroupVersionResource{
+		}, nil
+	case "deployment", "deploy":
+		return schema.GroupVersionResource{
 			Group:    "apps",
 			Version:  "v1",
 			Resource: "deployments",
-		},
-		"daemonset": schema.GroupVersionResource{
+		}, nil
+	case "daemonset", "ds":
+		return schema.GroupVersionResource{
 			Group:    "apps",
 			Version:  "v1",
 			Resource: "daemonsets",
-		},
-		"statefulset": schema.GroupVersionResource{
+		}, nil
+	case "statefulset", "sts":
+		return schema.GroupVersionResource{
 			Group:    "apps",
 			Version:  "v1",
 			Resource: "statefulsets",
-		},
+		}, nil
 	}
 
-	if gvr, ok := gvrMap[kind]; ok {
-		return gvr, nil
-	}
-
-	return gvr, fmt.Errorf("kind \"%s\" not supported", kind)
+	return schema.GroupVersionResource{}, fmt.Errorf("kind \"%s\" not supported", kind)
 }
