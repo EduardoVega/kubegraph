@@ -25,17 +25,28 @@ func NewPrinter(objData ObjData, dotGraph bool, out io.Writer) *Printer {
 
 // Print prints the tree or dot graph
 func (p *Printer) Print() (err error) {
-	var g string
+	g := ""
 
 	if p.DotGraph {
-		g, err = CreateDotGraph(p.ObjData)
-	} else {
-		g = CreateTreeGraph(p.ObjData, "", "")
-		g += "\n"
-	}
+		gv := gographviz.NewGraph()
 
-	if err != nil {
-		return err
+		err := gv.SetName("W")
+		// Directed graph to show relationships between nodes (->)
+		err = gv.SetDir(true)
+		// Disable multiple edges between nodes
+		err = gv.SetStrict(true)
+		if err != nil {
+			return err
+		}
+
+		_, err = CreateDotGraph(p.ObjData, gv)
+		if err != nil {
+			return err
+		}
+
+		g = gv.String()
+	} else {
+		g = fmt.Sprintf("\n%s\n\n", CreateTreeGraph(p.ObjData, "", ""))
 	}
 
 	fmt.Fprint(p.Out, g)
@@ -70,35 +81,14 @@ func CreateTreeGraph(o ObjData, graph, format string) string {
 }
 
 // CreateDotGraph returns a string holding the dot graph
-func CreateDotGraph(o ObjData) (string, error) {
-	g := gographviz.NewGraph()
-
-	err := g.SetName("W")
-	// Directed graph to show relationships between nodes (->)
-	err = g.SetDir(true)
-	// Disable multiple edges between nodes
-	err = g.SetStrict(true)
-	if err != nil {
-		return "", err
-	}
-
-	_, err = CreateNodesEdges(o, g)
-	if err != nil {
-		return "", err
-	}
-
-	return g.String(), nil
-}
-
-// CreateNodesEdges creates dot nodes using the objects and dot edges using the relationships between the objects
-func CreateNodesEdges(o ObjData, g *gographviz.Graph) (string, error) {
+func CreateDotGraph(o ObjData, g *gographviz.Graph) (string, error) {
 	err := g.AddNode("W", GetPrettyString(o.Obj.GetKind()+o.Obj.GetName()), map[string]string{"label": "\"" + o.Obj.GetKind() + ": " + o.Obj.GetName() + "\""})
 	if err != nil {
 		return "", err
 	}
 
 	for _, r := range o.RelatedObjsData {
-		n, err := CreateNodesEdges(r, g)
+		n, err := CreateDotGraph(r, g)
 		if err != nil {
 			return "", err
 		}
