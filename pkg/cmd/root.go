@@ -16,11 +16,12 @@ import (
 type Options struct {
 	ConfigFlags *genericclioptions.ConfigFlags
 	genericclioptions.IOStreams
-	Client    dynamic.Interface
-	Namespace string
-	Name      string
-	Kind      string
-	DotGraph  bool
+	Client       dynamic.Interface
+	Namespace    string
+	Name         string
+	Kind         string
+	DotGraph     bool
+	PrintVersion bool
 }
 
 // NewOptions returns an Options struct
@@ -36,13 +37,17 @@ func NewCmd(iostreams genericclioptions.IOStreams) *cobra.Command {
 	o := NewOptions(iostreams)
 
 	c := &cobra.Command{
-		Use:   "graph [KIND] [NAME] [flags]",
+		Use:   "[KIND] [NAME] [flags]",
 		Short: "Print a tree or dot graph to visualize the relationship between kubernetes objects",
 		Example: `
 # Print a tree graph that shows all kubernetes objects that are related to the service service-foo
+kubegraph service service-foo
+
 kubectl graph service service-foo
-		
+
 # Print a DOT graph that shows all kubernetes objects that are related to the ingress ingress-bar
+kubegraph ingress ingress-bar --dot 
+
 kubectl graph ingress ingress-bar --dot
 `,
 		SilenceUsage: true,
@@ -62,6 +67,7 @@ kubectl graph ingress ingress-bar --dot
 	}
 
 	c.Flags().BoolVar(&o.DotGraph, "dot", o.DotGraph, "If true, a DOT graph will be printed to stdout")
+	c.Flags().BoolVar(&o.PrintVersion, "version", o.PrintVersion, "Print kubegraph the version")
 	o.ConfigFlags.AddFlags(c.Flags())
 
 	return c
@@ -114,8 +120,8 @@ func (o *Options) Complete(cmd *cobra.Command, args []string) error {
 func (o *Options) Validate(args []string) error {
 	klog.V(1).Infoln("validate arguments")
 
-	if len(args) != 2 {
-		return fmt.Errorf("requires valid \"kind\" and \"name\" arguments")
+	if len(args) != 2 && !o.PrintVersion {
+		return fmt.Errorf("requires valid 'kind' and 'name' arguments")
 	}
 
 	return nil
@@ -125,11 +131,16 @@ func (o *Options) Validate(args []string) error {
 func (o *Options) Run() error {
 	klog.V(1).Infoln("execute the build function of the Builder")
 
-	b := graph.NewBuilder(o.Client, o.Out, o.DotGraph, o.Namespace, o.Kind, o.Name)
+	if o.PrintVersion {
+		fmt.Printf("Version:\t%s\nCommit:\t\t%s\nGo Version:\t%s\nOS/Arch:\t%s\nDate:\t\t%s\n", Version, Commit, GoVersion, OSArch, Date)
+	} else {
+		b := graph.NewBuilder(o.Client, o.Out, o.DotGraph, o.Namespace, o.Kind, o.Name)
 
-	err := b.Build()
-	if err != nil {
-		return err
+		err := b.Build()
+		if err != nil {
+			return err
+		}
+
 	}
 
 	return nil
