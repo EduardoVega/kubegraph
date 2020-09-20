@@ -7,7 +7,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// Contains verifies if a string element is being contained in a list of strings
+// Contains returns true if a string is being contained in a list of strings
 func Contains(element string, elements []string) bool {
 	for _, e := range elements {
 		if e == element {
@@ -22,7 +22,7 @@ func Contains(element string, elements []string) bool {
 func ToJSON(v interface{}) string {
 	b, err := json.Marshal(v)
 	if err != nil {
-		klog.Warningf("could not convert to JSON. Error: %s", err)
+		klog.V(4).Infof("%v can not be convert to JSON, Error: '%s'", v, err)
 		return ""
 	}
 

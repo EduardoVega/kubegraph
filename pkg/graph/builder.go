@@ -50,14 +50,14 @@ func NewBuilder(client dynamic.Interface, out io.Writer, dotGraph bool, namespac
 func (b *Builder) Build() error {
 	klog.V(1).Infoln("get objects to build the graph")
 
-	o, err := b.GetObject(b.Namespace, b.Kind, b.Name)
+	o, err := GetObject(b.Client, b.Namespace, b.Kind, b.Name)
 	if err != nil {
 		return err
 	}
 	b.ObjData.Obj = o
 	b.ObjData.Hierarchy = ""
 
-	r, err := b.GetRelatedObjects([]string{}, b.ObjData.Obj, b.Namespace)
+	r, err := GetRelatedObjects(b.Client, []string{}, b.ObjData.Obj, b.Namespace)
 	if err != nil {
 		return err
 	}
@@ -75,17 +75,16 @@ func (b *Builder) Build() error {
 }
 
 // GetObject returns the requested object
-func (b *Builder) GetObject(namespace, kind, name string) (unstructured.Unstructured, error) {
+func GetObject(client dynamic.Interface, namespace, kind, name string) (unstructured.Unstructured, error) {
 	klog.V(1).Infof("get main object '%s'", kind)
 	klog.V(2).Infof("get main object '%s' has finished", kind)
 
-	gvr, err := b.GetGroupVersionResource(kind)
+	gvr, err := GetGroupVersionResource(kind)
 	if err != nil {
 		return unstructured.Unstructured{}, err
 	}
 
-	var ri dynamic.ResourceInterface
-	ri = b.Client.Resource(gvr).Namespace(namespace)
+	ri := client.Resource(gvr).Namespace(namespace)
 
 	obj, err := ri.Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
@@ -96,13 +95,13 @@ func (b *Builder) GetObject(namespace, kind, name string) (unstructured.Unstruct
 }
 
 // GetRelatedObjects returns the list of upper and lower related objects
-func (b *Builder) GetRelatedObjects(processedObjs []string, obj unstructured.Unstructured, namespace string) ([]ObjData, error) {
+func GetRelatedObjects(client dynamic.Interface, processedObjs []string, obj unstructured.Unstructured, namespace string) ([]ObjData, error) {
 	klog.V(1).Infof("get related objects of kind '%s'", obj.GetKind())
 	defer klog.V(2).Infof("get related objects of kind '%s' has finished", obj.GetKind())
 
 	f := NewFilter()
 	relatedObjs := []ObjData{}
-	relatedKinds := b.GetRelatedKinds(strings.ToLower(obj.GetKind()))
+	relatedKinds := GetRelatedKinds(strings.ToLower(obj.GetKind()))
 	processedObjs = append(processedObjs, strings.ToLower(obj.GetKind()))
 
 	for hierarchy, kinds := range relatedKinds {
@@ -116,14 +115,12 @@ func (b *Builder) GetRelatedObjects(processedObjs []string, obj unstructured.Uns
 				continue
 			}
 
-			gvr, err := b.GetGroupVersionResource(k)
+			gvr, err := GetGroupVersionResource(k)
 			if err != nil {
 				return relatedObjs, err
 			}
 
-			var ri dynamic.ResourceInterface
-
-			ri = b.Client.Resource(gvr).Namespace(namespace)
+			ri := client.Resource(gvr).Namespace(namespace)
 
 			objList, err := ri.List(context.TODO(), metav1.ListOptions{})
 			if err != nil {
@@ -137,7 +134,7 @@ func (b *Builder) GetRelatedObjects(processedObjs []string, obj unstructured.Uns
 					r := ObjData{}
 					r.Obj = o
 					r.Hierarchy = hierarchy
-					innerRelatedObjs, err := b.GetRelatedObjects(processedObjs, o, namespace)
+					innerRelatedObjs, err := GetRelatedObjects(client, processedObjs, o, namespace)
 					if err != nil {
 						return relatedObjs, err
 					}
@@ -152,7 +149,7 @@ func (b *Builder) GetRelatedObjects(processedObjs []string, obj unstructured.Uns
 }
 
 // GetRelatedKinds returns a map of the related upper and lower kinds
-func (b *Builder) GetRelatedKinds(kind string) map[string][]string {
+func GetRelatedKinds(kind string) map[string][]string {
 	relatedkinds := map[string][]string{}
 
 	switch kind {
@@ -192,7 +189,7 @@ func (b *Builder) GetRelatedKinds(kind string) map[string][]string {
 }
 
 // GetGroupVersionResource returns the correct group version resource struct
-func (b *Builder) GetGroupVersionResource(kind string) (schema.GroupVersionResource, error) {
+func GetGroupVersionResource(kind string) (schema.GroupVersionResource, error) {
 	switch kind {
 	case "pod", "po":
 		return schema.GroupVersionResource{
@@ -238,5 +235,5 @@ func (b *Builder) GetGroupVersionResource(kind string) (schema.GroupVersionResou
 		}, nil
 	}
 
-	return schema.GroupVersionResource{}, fmt.Errorf("kind \"%s\" not supported", kind)
+	return schema.GroupVersionResource{}, fmt.Errorf("kind '%s' not supported", kind)
 }
