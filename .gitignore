@@ -1,6 +1,8 @@
+# VSCode launch configuration
 .vscode
 
-# Test image generated
+# Generated test image 
 graph.png
 
-TODOs.txt
+# kubegraph binary
+/kubegraph
