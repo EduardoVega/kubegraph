@@ -1,8 +1,8 @@
 os: linux
 dist: bionic
 
-services:
-  - docker
+# services:
+#   - docker
 
 language: go
 go:
@@ -11,6 +11,11 @@ go:
 branches:
   only:
     - master
+
+# stages:
+#   - CI
+#   - name: CD
+#     if: 
 
 jobs:
   include:
@@ -21,10 +26,14 @@ jobs:
     - name: "Unit tests"
       script:
         - make unittest
-    - name: Build
+
+    - stage: CD
+      name: Build
       script:
         - make build
-    - stage: CD
-      name: Release
-      script:
-        - echo "Hi"
+      deploy:
+        provider: releases
+        api_key: $GITHUB_OAUTH_TOKEN
+        skip_cleanup: true
+        on:
+          tags: true
