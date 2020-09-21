@@ -12,16 +12,19 @@ branches:
   only:
     - master
 
-stages:
-  - name: CI
-    jobs:
-      include:
-        - name: Verify clean code
-          script:
-            - make lint
-        - name: Run unit tests
-          script:
-            - make unittest
-        - name: Build binary
-          script:
-            - make build
+jobs:
+  include:
+    - stage: CI
+      name: "Clean code"
+      script:
+        - make lint
+    - name: "Unit tests"
+      script:
+        - make unittest
+    - name: Build
+      script:
+        - make build
+    - stage: CD
+      name: Release
+      script:
+        - echo "Hi"
