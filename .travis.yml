@@ -5,9 +5,13 @@ language: go
 go:
   - 1.14.x
 
+git:
+  quiet: true
+
 branches:
   only:
     - master
+    - /^v[0-9]{1}\.[0-9]{1}\.[0-9]{1}.*/
 
 jobs:
   include:
