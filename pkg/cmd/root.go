@@ -132,7 +132,7 @@ func (o *Options) Run() error {
 	klog.V(1).Infoln("execute the build function of the Builder")
 
 	if o.PrintVersion {
-		fmt.Printf("Version:\t%s\nCommit:\t\t%s\nGo Version:\t%s\nOS/Arch:\t%s\nDate:\t\t%s\n", Version, Commit, GoVersion, OSArch, Date)
+		fmt.Printf("Version:\t%s\nCommit:\t\t%s\nGo Version:\t%s\nDate:\t\t%s\n", Version, Commit, GoVersion, Date)
 	} else {
 		b := graph.NewBuilder(o.Client, o.Out, o.DotGraph, o.Namespace, o.Kind, o.Name)
 

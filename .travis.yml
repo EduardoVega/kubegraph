@@ -11,7 +11,7 @@ git:
 branches:
   only:
     - master
-    - /^v[0-9]{1}\.[0-9]{1}\.[0-9]{1}.*/
+    - /^v[0-9]+\.[0-9]+\.[0-9]+.*/
 
 jobs:
   include:
@@ -25,11 +25,32 @@ jobs:
     - stage: Release
       name: Build
       script:
-        - make build
+        - make build_linux
+        - zip kubegraph_linux_amd64.zip ./kubegraph
+        - make build_darwin
+        - zip kubegraph_darwin_amd64.zip ./kubegraph
+        - make build_win
+        - zip kubegraph_win_amd64.zip ./kubegraph
       deploy:
-        provider: releases
-        api_key: $GITHUB_OAUTH_TOKEN
-        file: kubegraph
-        cleanup: false
-        on:
-          tags: true
+        - provider: releases
+          api_key: $GITHUB_OAUTH_TOKEN
+          file: 
+            - kubegraph_linux_amd64.zip
+            - kubegraph_darwin_amd64.zip
+            - kubegraph_win_amd64.zip
+          skip_cleanup: true
+          prerelease: true
+          on:
+            tags: true
+            condition: $TRAVIS_TAG =~ .*rc[0-9]+$
+        - provider: releases
+          api_key: $GITHUB_OAUTH_TOKEN
+          file: 
+            - kubegraph_linux_amd64.zip
+            - kubegraph_darwin_amd64.zip
+            - kubegraph_win_amd64.zip
+          skip_cleanup: true
+          prerelease: false
+          on:
+            tags: true
+            condition: $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$
