@@ -1,0 +1,31 @@
+os: linux
+dist: bionic
+
+language: go
+go:
+  - 1.14.x
+
+branches:
+  only:
+    - master
+
+jobs:
+  include:
+    - stage: Validate
+      name: "Clean code"
+      script:
+        - make lint
+    - name: "Unit tests"
+      script:
+        - make unittest
+    - stage: Release
+      name: Build
+      script:
+        - make build
+      deploy:
+        provider: releases
+        api_key: $GITHUB_OAUTH_TOKEN
+        file: kubegraph
+        cleanup: false
+        on:
+          tags: true
