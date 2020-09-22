@@ -1,7 +1,7 @@
 package cmd
 
 // Version contains the version of the build
-const Version = "v0.0.0-dev"
+const Version = "v0.0.0-rc1"
 
 // Commit contains the code commit used to build
 const Commit = ""
