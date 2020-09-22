@@ -9,8 +9,5 @@ const Commit = ""
 // GoVersion contains the go version used to build
 const GoVersion = ""
 
-// OSArch contains the architecture used to build
-const OSArch = ""
-
 // Date contains the date info when the build was made
 const Date = ""
