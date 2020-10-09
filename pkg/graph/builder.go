@@ -155,33 +155,33 @@ func GetRelatedKinds(kind string) map[string][]string {
 	switch kind {
 	case "pod":
 		relatedkinds = map[string][]string{
-			"upper": []string{"service", "replicaset", "statefulset"},
-			"lower": []string{},
+			"upper": {"service", "replicaset", "statefulset"},
+			"lower": {},
 		}
 	case "service":
 		relatedkinds = map[string][]string{
-			"upper": []string{"ingress"},
-			"lower": []string{"pod"},
+			"upper": {"ingress"},
+			"lower": {"pod"},
 		}
 	case "ingress":
 		relatedkinds = map[string][]string{
-			"upper": []string{},
-			"lower": []string{"service"},
+			"upper": {},
+			"lower": {"service"},
 		}
 	case "replicaset":
 		relatedkinds = map[string][]string{
-			"upper": []string{"deployment", "daemonset"},
-			"lower": []string{"pod"},
+			"upper": {"deployment", "daemonset"},
+			"lower": {"pod"},
 		}
 	case "deployment", "daemonset":
 		relatedkinds = map[string][]string{
-			"upper": []string{},
-			"lower": []string{"replicaset"},
+			"upper": {},
+			"lower": {"replicaset"},
 		}
 	case "statefulset":
 		relatedkinds = map[string][]string{
-			"upper": []string{},
-			"lower": []string{"pod"},
+			"upper": {},
+			"lower": {"pod"},
 		}
 	}
 

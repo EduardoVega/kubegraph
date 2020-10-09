@@ -18,7 +18,7 @@ jobs:
     - stage: Validate
       name: "Clean code"
       script:
-        - make lint
+        - make validate
     - name: "Unit tests"
       script:
         - make unittest

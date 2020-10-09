@@ -2,39 +2,46 @@ GO ?= go
 GIT_COMMIT=$(shell git rev-parse HEAD 2> /dev/null || true)
 GO_VERSION=$(shell $(GO) version | cut -d" " -f3)
 DATE=$(shell date '+%d %h %Y %H:%M:%S')
+BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
+
+LDFLAGS ?= \
+	-X kubegraph/pkg/cmd.Commit=$(GIT_COMMIT) \
+	-X kubegraph/pkg/cmd.GoVersion=$(GO_VERSION) \
+	-X 'kubegraph/pkg/cmd.Date=$(DATE)' \
+	-X kubegraph/pkg/cmd.Branch=$(BRANCH)
 
 .DEFAULT: build
 
-build: version 
-	$(GO) build -o kubegraph cmd/kubegraph/main.go
-	mv pkg/cmd/.version.go pkg/cmd/version.go
+build:
+	$(GO) build -ldflags "$(LDFLAGS) -X 'kubegraph/pkg/cmd.OSArch=$(shell go env GOOS)/$(shell go env GOARCH)'" -o kubegraph cmd/kubegraph/main.go
 
-build_linux: version
-	env GOOS=linux GOARCH=amd64 $(GO) build -o kubegraph cmd/kubegraph/main.go
-	mv pkg/cmd/.version.go pkg/cmd/version.go
+build_linux:
+	env GOOS=linux GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS) -X kubegraph/pkg/cmd.OSArch=linux/amd64" -o kubegraph cmd/kubegraph/main.go
 
-build_win: version
-	env GOOS=windows GOARCH=amd64 $(GO) build -o kubegraph cmd/kubegraph/main.go
-	mv pkg/cmd/.version.go pkg/cmd/version.go
+build_win:
+	env GOOS=windows GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS) -X kubegraph/pkg/cmd.OSArch=windows/amd64" -o kubegraph cmd/kubegraph/main.go
 
-build_darwin: version
-	env GOOS=darwin GOARCH=amd64 $(GO) build -o kubegraph cmd/kubegraph/main.go
-	mv pkg/cmd/.version.go pkg/cmd/version.go
+build_darwin:
+	env GOOS=darwin GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS) -X kubegraph/pkg/cmd.OSArch=darwin/amd64" -o kubegraph cmd/kubegraph/main.go
 
 install:
 	install -D -m0755 kubegraph /usr/local/bin/kubegraph
-
-version:
-	mv pkg/cmd/version.go pkg/cmd/.version.go
-	sed -e "s/^const Commit.*/const Commit = \"$(GIT_COMMIT)\"/g" \
-		-e "s/^const GoVersion.*/const GoVersion = \"$(GO_VERSION)\"/g" \
-		-e "s/^const Date.*/const Date = \"$(DATE)\"/g" pkg/cmd/.version.go > pkg/cmd/version.go
 
 test: unittest
 
 unittest:
 	$(GO) test -v -cover ./...
 
-lint:
+validate: gofmt
 	$(GO) vet ./...
-	$(GO) fmt ./...
+
+# https://github.com/containers/podman/blob/master/Makefile
+gofmt:
+	find . -name '*.go' -type f \
+		-not \( \
+			-name '.golangci.yml' -o \
+			-name 'Makefile' -o \
+			-path './vendor/*' -prune -o \
+			-path './contrib/*' -prune \
+		\) -exec gofmt -d -e -s -w {} \+
+	git diff --exit-code
