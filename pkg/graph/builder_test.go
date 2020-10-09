@@ -79,7 +79,7 @@ func (r MockResourceInterface) List(ctx context.Context, opts metav1.ListOptions
 	case "pods":
 		return &unstructured.UnstructuredList{
 			Items: []unstructured.Unstructured{
-				unstructured.Unstructured{
+				{
 					Object: map[string]interface{}{
 						"kind": "Pod",
 						"metadata": map[string]interface{}{
@@ -96,7 +96,7 @@ func (r MockResourceInterface) List(ctx context.Context, opts metav1.ListOptions
 						},
 					},
 				},
-				unstructured.Unstructured{
+				{
 					Object: map[string]interface{}{
 						"kind": "Pod",
 						"metadata": map[string]interface{}{
@@ -127,7 +127,7 @@ func (r MockResourceInterface) List(ctx context.Context, opts metav1.ListOptions
 	case "statefulsets":
 		return &unstructured.UnstructuredList{
 			Items: []unstructured.Unstructured{
-				unstructured.Unstructured{
+				{
 					Object: map[string]interface{}{
 						"kind": "Statefulset",
 						"metadata": map[string]interface{}{
@@ -136,7 +136,7 @@ func (r MockResourceInterface) List(ctx context.Context, opts metav1.ListOptions
 						},
 					},
 				},
-				unstructured.Unstructured{
+				{
 					Object: map[string]interface{}{
 						"kind": "Statefulset",
 						"metadata": map[string]interface{}{
@@ -185,43 +185,43 @@ func TestGetRelatedKinds(t *testing.T) {
 		{
 			"pod",
 			map[string][]string{
-				"upper": []string{"service", "replicaset", "statefulset"},
-				"lower": []string{},
+				"upper": {"service", "replicaset", "statefulset"},
+				"lower": {},
 			},
 		},
 		{
 			"service",
 			map[string][]string{
-				"upper": []string{"ingress"},
-				"lower": []string{"pod"},
+				"upper": {"ingress"},
+				"lower": {"pod"},
 			},
 		},
 		{
 			"ingress",
 			map[string][]string{
-				"upper": []string{},
-				"lower": []string{"service"},
+				"upper": {},
+				"lower": {"service"},
 			},
 		},
 		{
 			"replicaset",
 			map[string][]string{
-				"upper": []string{"deployment", "daemonset"},
-				"lower": []string{"pod"},
+				"upper": {"deployment", "daemonset"},
+				"lower": {"pod"},
 			},
 		},
 		{
 			"daemonset",
 			map[string][]string{
-				"upper": []string{},
-				"lower": []string{"replicaset"},
+				"upper": {},
+				"lower": {"replicaset"},
 			},
 		},
 		{
 			"statefulset",
 			map[string][]string{
-				"upper": []string{},
-				"lower": []string{"pod"},
+				"upper": {},
+				"lower": {"pod"},
 			},
 		},
 	}
