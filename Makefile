@@ -32,8 +32,13 @@ test: unittest
 unittest:
 	$(GO) test -v -cover ./...
 
-validate: gofmt
-	$(GO) vet ./...
+validate: gofmt lint
+
+install_golanci_lint: 
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(shell go env GOPATH)/bin" v1.31.0
+
+lint:
+	golangci-lint run --timeout=5m0s
 
 # https://github.com/containers/podman/blob/master/Makefile
 gofmt:
@@ -45,3 +50,5 @@ gofmt:
 			-path './contrib/*' -prune \
 		\) -exec gofmt -d -e -s -w {} \+
 	git diff --exit-code
+
+.PHONY: build build_linux build_darwin build_win test unittest validate install_golanci_lint lint gofmt install
