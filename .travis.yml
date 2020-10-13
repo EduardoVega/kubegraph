@@ -18,6 +18,7 @@ jobs:
     - stage: Validate
       name: "Clean code"
       script:
+        - make install_golanci_lint
         - make validate
     - name: "Unit tests"
       script:

@@ -17,8 +17,6 @@ import (
 
 type MockClient struct{}
 
-type MockNamespaceableResourceInterface struct{}
-
 type MockResourceInterface struct {
 	Resource string
 }
@@ -167,7 +165,10 @@ func TestBuild(t *testing.T) {
 
 	b := NewBuilder(c, o, false, "default", "service", "service-foo")
 
-	b.Build()
+	err := b.Build()
+	if err != nil {
+		t.Errorf("Graph could not be created. Error: %q", err)
+	}
 
 	expected := "\n[Service] service-foo\n\t\t┌── [Statefulset] statefulset-foo-1\n\t└── [Pod] pod-foo-1\n\n"
 

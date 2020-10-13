@@ -31,8 +31,14 @@ func (p *Printer) Print() (err error) {
 		gv := gographviz.NewGraph()
 
 		err := gv.SetName("W")
+		if err != nil {
+			return err
+		}
 		// Directed graph to show relationships between nodes (->)
 		err = gv.SetDir(true)
+		if err != nil {
+			return err
+		}
 		// Disable multiple edges between nodes
 		err = gv.SetStrict(true)
 		if err != nil {
@@ -57,12 +63,12 @@ func (p *Printer) Print() (err error) {
 // CreateTreeGraph returns a string holding the tree graph
 func CreateTreeGraph(o ObjData, graph, format string) string {
 
-	if o.Hierarchy == "upper" {
+	if graph == "" {
+		graph = fmt.Sprintf("[%s] %s", o.Obj.GetKind(), o.Obj.GetName())
+	} else if o.Hierarchy == "upper" {
 		graph = fmt.Sprintf("%s┌── [%s] %s", format, o.Obj.GetKind(), o.Obj.GetName())
 	} else if o.Hierarchy == "lower" {
 		graph = fmt.Sprintf("%s└── [%s] %s", format, o.Obj.GetKind(), o.Obj.GetName())
-	} else {
-		graph = fmt.Sprintf("[%s] %s", o.Obj.GetKind(), o.Obj.GetName())
 	}
 
 	format = format + "\t"
@@ -94,11 +100,17 @@ func CreateDotGraph(o ObjData, g *gographviz.Graph) (string, error) {
 		}
 
 		if r.Hierarchy == "upper" {
-			g.AddEdge(n, GetPrettyString(o.Obj.GetKind()+o.Obj.GetName()), true, nil)
+			err := g.AddEdge(n, GetPrettyString(o.Obj.GetKind()+o.Obj.GetName()), true, nil)
+			if err != nil {
+				return "", err
+			}
 		}
 
 		if r.Hierarchy == "lower" {
-			g.AddEdge(GetPrettyString(o.Obj.GetKind()+o.Obj.GetName()), n, true, nil)
+			err := g.AddEdge(GetPrettyString(o.Obj.GetKind()+o.Obj.GetName()), n, true, nil)
+			if err != nil {
+				return "", err
+			}
 		}
 
 	}

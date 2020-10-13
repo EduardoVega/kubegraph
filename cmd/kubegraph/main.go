@@ -14,7 +14,7 @@ import (
 func init() {
 	klog.InitFlags(nil)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-	pflag.Set("logtostderr", "true")
+	_ = pflag.Set("logtostderr", "true")
 
 	// Hide flags from --help
 	flag.CommandLine.VisitAll(func(f *flag.Flag) {
