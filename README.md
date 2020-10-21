@@ -4,6 +4,22 @@
 
 kubegraph provides an easy way to visualize in your terminal, the relationship between k8s objects in a tree or dot graph.
 
+![](assets/kubegraph.gif)
+
+graph.png
+
+![](assets/graph.png?raw=true)
+
+## Supported Kubernetes Object kinds
+
+* Pod
+* Service
+* Ingress
+* Replicaset
+* Deployment
+* Daemonset
+* Statefulset
+
 ## Using kubegraph
 
 ```
@@ -24,23 +40,13 @@ Examples:
     ./kubegraph service my-service --dot | dot -Tpng > my-graph.png 
     ```
 
-## Supported Kubernetes Object kinds
-
-* pod
-* service
-* ingress
-* replicaset
-* deployment
-* daemonset
-* statefulset
-
 ## Installing kubegraph
 
 ### Pre-built Binaries
 
 Download the latest binary from [releases](https://github.com/EduardoVega/kubegraph/releases)
 
-Available OS/Architectures
+Available OS/Arch
 * linux/amd64
 * darwin/amd64
 * windows/amd64

@@ -1,8 +1,5 @@
 # VSCode launch configuration
 .vscode
 
-# Generated test image 
-graph.png
-
 # kubegraph binary
 /kubegraph
