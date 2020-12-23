@@ -51,7 +51,7 @@ func TestFilter(t *testing.T) {
 			},
 			unstructured.Unstructured{
 				Object: map[string]interface{}{
-					"kind": "Daemonset",
+					"kind": "Deployment",
 					"metadata": map[string]interface{}{
 						"uid": "1d1fcfc1-6f23-4578-9b70-8361a733ab26",
 					},
