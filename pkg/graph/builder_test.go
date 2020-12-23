@@ -186,7 +186,7 @@ func TestGetRelatedKinds(t *testing.T) {
 		{
 			"pod",
 			map[string][]string{
-				"upper": {"service", "replicaset", "statefulset"},
+				"upper": {"service", "replicaset", "statefulset", "daemonset"},
 				"lower": {},
 			},
 		},
@@ -207,7 +207,7 @@ func TestGetRelatedKinds(t *testing.T) {
 		{
 			"replicaset",
 			map[string][]string{
-				"upper": {"deployment", "daemonset"},
+				"upper": {"deployment"},
 				"lower": {"pod"},
 			},
 		},
@@ -215,7 +215,7 @@ func TestGetRelatedKinds(t *testing.T) {
 			"daemonset",
 			map[string][]string{
 				"upper": {},
-				"lower": {"replicaset"},
+				"lower": {"pod"},
 			},
 		},
 		{

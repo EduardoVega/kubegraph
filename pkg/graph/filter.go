@@ -23,7 +23,7 @@ func (f *Filter) FilterObj(obj unstructured.Unstructured, relatedObj unstructure
 		switch strings.ToLower(relatedObj.GetKind()) {
 		case "service":
 			return FilterByLabelSelector(GetSelector(relatedObj), obj.GetLabels())
-		case "replicaset", "statefulset":
+		case "replicaset", "statefulset", "daemonset":
 			return FilterByOwnerReferenceUID(obj.GetOwnerReferences(), relatedObj.GetUID())
 		}
 	case "service":
@@ -40,18 +40,18 @@ func (f *Filter) FilterObj(obj unstructured.Unstructured, relatedObj unstructure
 		}
 	case "replicaset":
 		switch strings.ToLower(relatedObj.GetKind()) {
-		case "daemonset", "deployment":
+		case "deployment":
 			return FilterByOwnerReferenceUID(obj.GetOwnerReferences(), relatedObj.GetUID())
 		case "pod":
 			return FilterByOwnerReferenceUID(relatedObj.GetOwnerReferences(), obj.GetUID())
 
 		}
-	case "deployment", "daemonset":
+	case "deployment":
 		switch strings.ToLower(relatedObj.GetKind()) {
 		case "replicaset":
 			return FilterByOwnerReferenceUID(relatedObj.GetOwnerReferences(), obj.GetUID())
 		}
-	case "statefulset":
+	case "statefulset", "daemonset":
 		switch strings.ToLower(relatedObj.GetKind()) {
 		case "pod":
 			return FilterByOwnerReferenceUID(relatedObj.GetOwnerReferences(), obj.GetUID())
