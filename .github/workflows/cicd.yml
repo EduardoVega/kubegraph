@@ -1,0 +1,154 @@
+name: cicd
+
+on:
+  push:
+    branches: [ master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  # super-lint:
+  #   name: Super lint code
+  #   runs-on: ubuntu-latest
+  #   continue-on-error: true
+
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
+
+  #     - name: Run super linter
+  #       uses: github/super-linter@v3
+  #       env:
+  #         DEFAULT_BRANCH: master
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  golangci-lint:
+    name: Golangci lint code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.14
+
+      - name: Validate code
+        run: make lint
+
+  unit-test:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.14
+
+    - name: Run unit tests
+      run: make unittest
+
+  build:
+    name: Build code
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.14
+
+    - name: Build linux
+      run: | 
+        make build_linux
+        zip kubegraph_linux_amd64.zip ./kubegraph
+
+    - name: Build windows
+      run: | 
+        make build_win
+        zip kubegraph_win_amd64.zip ./kubegraph
+
+    - name: Build darwin
+      run: | 
+        make build_darwin
+        zip kubegraph_darwin_amd64.zip ./kubegraph
+
+    - name: Upload artifacts
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      uses: actions/upload-artifact@v2
+      with:
+        name: artifacts
+        path: |
+          ./kubegraph*.zip
+        if-no-files-found: error
+
+  release:
+    name: Release code
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    needs:
+      - golangci-lint
+      - unit-test
+      - build
+
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: artifacts
+
+    - name: Check release type
+      run: |
+        [[ "${GITHUB_REF}" =~ .*rc[0-9]+$ ]] && echo "IS_PRERELEASE=true" >> $GITHUB_ENV || echo "IS_PRERELEASE=false" >> $GITHUB_ENV
+
+    - name: Create release
+      id: create-release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: ${{ github.ref }}
+        draft: false
+        prerelease: ${{ env.IS_PRERELEASE }}
+
+    - name: Upload linux asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_path: ./kubegraph_linux_amd64.zip
+        asset_name: kubegraph_linux_amd64.zip
+        asset_content_type: application/zip
+
+    - name: Upload windows asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_path: ./kubegraph_win_amd64.zip
+        asset_name: kubegraph_win_amd64.zip
+        asset_content_type: application/zip
+
+    - name: Upload darwin asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_path: ./kubegraph_darwin_amd64.zip
+        asset_name: kubegraph_darwin_amd64.zip
+        asset_content_type: application/zip
