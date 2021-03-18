@@ -1,7 +1,7 @@
 package cmd
 
 // Version contains the version of the build
-var Version = "v0.0.0-rc2"
+var Version = "v0.0.0"
 
 // Commit contains the code commit used to create the binary
 var Commit string
