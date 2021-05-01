@@ -22,39 +22,39 @@ func (f *Filter) FilterObj(obj unstructured.Unstructured, relatedObj unstructure
 	case "pod":
 		switch strings.ToLower(relatedObj.GetKind()) {
 		case "service":
-			return FilterByLabelSelector(GetSelector(relatedObj), obj.GetLabels())
+			return filterByLabelSelector(getSelector(relatedObj), obj.GetLabels())
 		case "replicaset", "statefulset", "daemonset":
-			return FilterByOwnerReferenceUID(obj.GetOwnerReferences(), relatedObj.GetUID())
+			return filterByOwnerReferenceUID(obj.GetOwnerReferences(), relatedObj.GetUID())
 		}
 	case "service":
 		switch strings.ToLower(relatedObj.GetKind()) {
 		case "ingress":
-			return FilterByServiceName(obj.GetName(), GetBackendNames(relatedObj))
+			return filterByServiceName(obj.GetName(), getBackendNames(relatedObj))
 		case "pod":
-			return FilterByLabelSelector(GetSelector(obj), relatedObj.GetLabels())
+			return filterByLabelSelector(getSelector(obj), relatedObj.GetLabels())
 		}
 	case "ingress":
 		switch strings.ToLower(relatedObj.GetKind()) {
 		case "service":
-			return FilterByServiceName(relatedObj.GetName(), GetBackendNames(obj))
+			return filterByServiceName(relatedObj.GetName(), getBackendNames(obj))
 		}
 	case "replicaset":
 		switch strings.ToLower(relatedObj.GetKind()) {
 		case "deployment":
-			return FilterByOwnerReferenceUID(obj.GetOwnerReferences(), relatedObj.GetUID())
+			return filterByOwnerReferenceUID(obj.GetOwnerReferences(), relatedObj.GetUID())
 		case "pod":
-			return FilterByOwnerReferenceUID(relatedObj.GetOwnerReferences(), obj.GetUID())
+			return filterByOwnerReferenceUID(relatedObj.GetOwnerReferences(), obj.GetUID())
 
 		}
 	case "deployment":
 		switch strings.ToLower(relatedObj.GetKind()) {
 		case "replicaset":
-			return FilterByOwnerReferenceUID(relatedObj.GetOwnerReferences(), obj.GetUID())
+			return filterByOwnerReferenceUID(relatedObj.GetOwnerReferences(), obj.GetUID())
 		}
 	case "statefulset", "daemonset":
 		switch strings.ToLower(relatedObj.GetKind()) {
 		case "pod":
-			return FilterByOwnerReferenceUID(relatedObj.GetOwnerReferences(), obj.GetUID())
+			return filterByOwnerReferenceUID(relatedObj.GetOwnerReferences(), obj.GetUID())
 		}
 
 	}
@@ -62,8 +62,8 @@ func (f *Filter) FilterObj(obj unstructured.Unstructured, relatedObj unstructure
 	return false
 }
 
-// GetBackendNames returns the backend services configured in an ingress
-func GetBackendNames(ingressObj unstructured.Unstructured) []string {
+// getBackendNames returns the backend services configured in an ingress
+func getBackendNames(ingressObj unstructured.Unstructured) []string {
 	backendServiceNames := []string{}
 	rules := ingressObj.Object["spec"].(map[string]interface{})["rules"]
 
@@ -85,8 +85,8 @@ func GetBackendNames(ingressObj unstructured.Unstructured) []string {
 	return backendServiceNames
 }
 
-// GetSelector returns the label selector from a service
-func GetSelector(serviceObj unstructured.Unstructured) map[string]interface{} {
+// getSelector returns the label selector from a service
+func getSelector(serviceObj unstructured.Unstructured) map[string]interface{} {
 	s := serviceObj.Object["spec"].(map[string]interface{})["selector"]
 
 	if s != nil {
@@ -96,9 +96,9 @@ func GetSelector(serviceObj unstructured.Unstructured) map[string]interface{} {
 	return nil
 }
 
-// FilterByServiceName returns true if a service name is found in
+// filterByServiceName returns true if a service name is found in
 // an ingress backend service name list
-func FilterByServiceName(serviceName string, backendNames []string) bool {
+func filterByServiceName(serviceName string, backendNames []string) bool {
 	for _, b := range backendNames {
 		if serviceName == b {
 			return true
@@ -108,9 +108,9 @@ func FilterByServiceName(serviceName string, backendNames []string) bool {
 	return false
 }
 
-// FilterByOwnerReferenceUID returns true if an object UID is found
+// filterByOwnerReferenceUID returns true if an object UID is found
 // in an owner reference list
-func FilterByOwnerReferenceUID(ownerReferences []v1.OwnerReference, relatedObjUID types.UID) bool {
+func filterByOwnerReferenceUID(ownerReferences []v1.OwnerReference, relatedObjUID types.UID) bool {
 	for _, r := range ownerReferences {
 		if r.UID == relatedObjUID {
 			return true
@@ -120,8 +120,8 @@ func FilterByOwnerReferenceUID(ownerReferences []v1.OwnerReference, relatedObjUI
 	return false
 }
 
-// FilterByLabelSelector returns true if selector keys and values are found in a labels map
-func FilterByLabelSelector(selector map[string]interface{}, labels map[string]string) bool {
+// filterByLabelSelector returns true if selector keys and values are found in a labels map
+func filterByLabelSelector(selector map[string]interface{}, labels map[string]string) bool {
 	if selector == nil {
 		return false
 	}

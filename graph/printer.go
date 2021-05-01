@@ -45,14 +45,14 @@ func (p *Printer) Print() (err error) {
 			return err
 		}
 
-		_, err = CreateDotGraph(p.ObjData, gv)
+		_, err = createDotGraph(p.ObjData, gv)
 		if err != nil {
 			return err
 		}
 
 		g = gv.String()
 	} else {
-		g = fmt.Sprintf("\n%s\n\n", CreateTreeGraph(p.ObjData, "", ""))
+		g = fmt.Sprintf("\n%s\n\n", createTreeGraph(p.ObjData, "", ""))
 	}
 
 	fmt.Fprint(p.Out, g)
@@ -60,8 +60,8 @@ func (p *Printer) Print() (err error) {
 	return
 }
 
-// CreateTreeGraph returns a string holding the tree graph
-func CreateTreeGraph(o ObjData, graph, format string) string {
+// createTreeGraph returns a string holding the tree graph
+func createTreeGraph(o ObjData, graph, format string) string {
 
 	if graph == "" {
 		graph = fmt.Sprintf("[%s] %s", o.Obj.GetKind(), o.Obj.GetName())
@@ -74,7 +74,7 @@ func CreateTreeGraph(o ObjData, graph, format string) string {
 	format = format + "\t"
 
 	for _, r := range o.RelatedObjsData {
-		relatedGraph := CreateTreeGraph(r, graph, format)
+		relatedGraph := createTreeGraph(r, graph, format)
 
 		if r.Hierarchy == "upper" {
 			graph = relatedGraph + "\n" + graph
@@ -86,15 +86,15 @@ func CreateTreeGraph(o ObjData, graph, format string) string {
 	return graph
 }
 
-// CreateDotGraph returns a string holding the dot graph
-func CreateDotGraph(o ObjData, g *gographviz.Graph) (string, error) {
+// createDotGraph returns a string holding the dot graph
+func createDotGraph(o ObjData, g *gographviz.Graph) (string, error) {
 	err := g.AddNode("W", GetPrettyString(o.Obj.GetKind()+o.Obj.GetName()), map[string]string{"label": "\"" + o.Obj.GetKind() + ": " + o.Obj.GetName() + "\""})
 	if err != nil {
 		return "", err
 	}
 
 	for _, r := range o.RelatedObjsData {
-		n, err := CreateDotGraph(r, g)
+		n, err := createDotGraph(r, g)
 		if err != nil {
 			return "", err
 		}
