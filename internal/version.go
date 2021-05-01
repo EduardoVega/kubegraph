@@ -1,4 +1,4 @@
-package cmd
+package internal
 
 // Version contains the version of the build
 var Version = "v0.0.0"

@@ -228,7 +228,7 @@ func TestGetRelatedKinds(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		r := GetRelatedKinds(test.Kind)
+		r := getRelatedKinds(test.Kind)
 
 		if !reflect.DeepEqual(r["upper"], test.Expected["upper"]) || !reflect.DeepEqual(r["lower"], test.Expected["lower"]) {
 			t.Errorf("Returned result was incorrect, got: %v want: %v", r, test.Expected)
@@ -278,7 +278,7 @@ func TestGetGroupVersionResource(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		r, err := GetGroupVersionResource(test.Kind)
+		r, err := getGroupVersionResource(test.Kind)
 
 		if err != nil {
 			if err.Error() != fmt.Sprintf("kind '%s' not supported", test.Kind) {
