@@ -4,11 +4,11 @@
 
 kubegraph provides an easy way to visualize in your terminal, the relationship between k8s objects in a tree or dot graph.
 
-![](internal/assets/kubegraph.gif)
+![](docs/assets/kubegraph.gif)
 
 graph.png
 
-![](internal/assets/graph.png?raw=true)
+![](docs/assets/graph.png?raw=true)
 
 ## Supported Kubernetes Object kinds
 

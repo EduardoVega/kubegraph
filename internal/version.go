@@ -1,7 +1,7 @@
 package internal
 
 // Version contains the version of the build
-var Version = "v0.0.0"
+var Version = "v0.0.1-rc1"
 
 // Commit contains the code commit used to create the binary
 var Commit string
