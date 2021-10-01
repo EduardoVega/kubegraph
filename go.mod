@@ -18,7 +18,7 @@ require (
 	github.com/evanphx/json-patch v4.11.0+incompatible // indirect
 	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
-	github.com/go-logr/logr v0.4.0 // indirect
+	github.com/go-logr/logr v1.0.0 // indirect
 	github.com/go-openapi/jsonpointer v0.19.3 // indirect
 	github.com/go-openapi/jsonreference v0.19.3 // indirect
 	github.com/go-openapi/spec v0.19.3 // indirect
@@ -57,7 +57,7 @@ require (
 	k8s.io/apimachinery v0.21.2
 	k8s.io/cli-runtime v0.20.5
 	k8s.io/client-go v0.21.0
-	k8s.io/klog/v2 v2.10.0
+	k8s.io/klog/v2 v2.20.0
 	k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7 // indirect
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect
 	sigs.k8s.io/kustomize v2.0.3+incompatible // indirect
