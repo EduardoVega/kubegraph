@@ -3,6 +3,16 @@ module github.com/EduardoVega/kubegraph
 go 1.17
 
 require (
+	github.com/awalterschulze/gographviz v2.0.3+incompatible
+	github.com/spf13/cobra v1.5.0
+	github.com/spf13/pflag v1.0.5
+	k8s.io/apimachinery v0.21.2
+	k8s.io/cli-runtime v0.20.5
+	k8s.io/client-go v0.21.0
+	k8s.io/klog/v2 v2.10.0
+)
+
+require (
 	cloud.google.com/go v0.81.0 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
 	github.com/Azure/go-autorest/autorest v0.11.18 // indirect
@@ -12,7 +22,6 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
-	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful v2.9.5+incompatible // indirect
 	github.com/evanphx/json-patch v4.11.0+incompatible // indirect
@@ -39,8 +48,6 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/spf13/cobra v1.2.1
-	github.com/spf13/pflag v1.0.5
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023 // indirect
 	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602 // indirect
@@ -54,10 +61,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	k8s.io/api v0.21.2 // indirect
-	k8s.io/apimachinery v0.21.2
-	k8s.io/cli-runtime v0.20.5
-	k8s.io/client-go v0.21.0
-	k8s.io/klog/v2 v2.10.0
 	k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7 // indirect
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect
 	sigs.k8s.io/kustomize v2.0.3+incompatible // indirect
